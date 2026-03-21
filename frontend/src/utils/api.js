@@ -52,10 +52,22 @@ const parseResponse = async (response) => {
     ? await response.json()
     : await response.text();
 
+  const looksLikeHtml =
+    typeof payload === "string" &&
+    /<!doctype html|<html[\s>]/i.test(payload.trim().slice(0, 200));
+
   if (!response.ok) {
     const error = new Error(payload?.message || payload?.error || `Request failed with ${response.status}`);
     error.status = response.status;
     error.payload = payload;
+    throw error;
+  }
+
+  if (looksLikeHtml || contentType.includes("text/html")) {
+    const error = new Error("Received HTML instead of API JSON");
+    error.status = 404;
+    error.payload = payload;
+    error.retryable = true;
     throw error;
   }
 
@@ -75,6 +87,7 @@ export const requestJson = async (path, options = {}) => {
 
       const shouldTryNextBase =
         error instanceof TypeError ||
+        error.retryable ||
         error.status === 404 ||
         error.status === 405 ||
         /failed to fetch/i.test(String(error.message || ""));
