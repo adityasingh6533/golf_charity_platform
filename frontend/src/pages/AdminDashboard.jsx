@@ -2,15 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import "../styles/AdminDashboard.css";
 import API from "../utils/commonapi";
 
-function getAuthUser() {
-  try {
-    const raw = localStorage.getItem("authUser");
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
 function formatCurrency(amount) {
   return `Rs. ${Number(amount || 0).toLocaleString("en-IN")}`;
 }
@@ -171,6 +162,7 @@ export default function AdminDashboard() {
   const [charities, setCharities] = useState([]);
   const [drawStatus, setDrawStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [bootstrapping, setBootstrapping] = useState(true);
   const [drawMode, setDrawMode] = useState("random");
   const [drawPreview, setDrawPreview] = useState(null);
   const [editingCharityId, setEditingCharityId] = useState("");
@@ -191,18 +183,42 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    const authUser = getAuthUser();
     const token = localStorage.getItem("authToken");
 
-    if (!token || String(authUser?.role || "").toLowerCase() !== "admin") {
+    if (!token) {
       window.location.href = "/signin";
       return;
     }
 
-    refreshAll().catch((error) => {
-      console.log(error);
-      setDrawStatus(error?.response?.data?.message || error.message || "Unable to load admin data");
-    });
+    const verifyAndLoad = async () => {
+      try {
+        const profileRes = await API.get("/users/me");
+        const profile = profileRes.data;
+
+        localStorage.setItem("authUser", JSON.stringify(profile));
+
+        if (String(profile?.role || "").toLowerCase() !== "admin") {
+          window.location.href = "/dashboard";
+          return;
+        }
+
+        await refreshAll();
+      } catch (error) {
+        console.log(error);
+        const message = error?.response?.data?.message || error.message || "Unable to load admin data";
+        setDrawStatus(message);
+
+        if (error?.response?.data?.message === "Login required") {
+          localStorage.removeItem("authUser");
+          localStorage.removeItem("authToken");
+          window.location.href = "/signin";
+        }
+      } finally {
+        setBootstrapping(false);
+      }
+    };
+
+    verifyAndLoad();
   }, []);
 
   const executeDrawRequest = async (simulation) => {
@@ -319,6 +335,12 @@ export default function AdminDashboard() {
   return (
     <div className="admin-page">
       <div className="admin-shell">
+        {bootstrapping ? (
+          <section className="admin-panel admin-panel--full">
+            <div className="admin-empty-state">Checking admin access...</div>
+          </section>
+        ) : (
+          <>
         <section className="admin-hero">
           <div className="admin-hero-copy">
             <div className="admin-eyebrow">Control Room</div>
@@ -600,6 +622,8 @@ export default function AdminDashboard() {
             )}
           </div>
         </section>
+          </>
+        )}
       </div>
     </div>
   );
