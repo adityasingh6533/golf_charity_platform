@@ -15,7 +15,7 @@ const { seedLocalData } = require("./service/seed");
 const { enforceHttps, applySecurityHeaders } = require("./middleware/security");
 
 const MONGO_URL =
-  (process.env.MONGO_URL || "mongodb+srv://s71aditya_db_user:Vndpexk2UEjwgfvo@cluster0.8chmwhf.mongodb.net/myDatabase").trim();
+  (process.env.MONGO_URL || "mongodb://127.0.0.1:27017/golf_charity_platform").trim();
 
 let bootstrapPromise = null;
 
