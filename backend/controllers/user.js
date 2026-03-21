@@ -2,10 +2,11 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/user");
 const Charity = require("../models/charity");
 const { PLAN_AMOUNTS } = require("../service/draw");
+const { applyAdminRole } = require("../service/adminAccess");
 
 const sanitizeUser = (user) => {
   if (!user) return null;
-  const userObj = user.toObject ? user.toObject({ getters: false }) : { ...user };
+  const userObj = applyAdminRole(user);
   delete userObj.passwordHash;
   delete userObj.__v;
   return userObj;
@@ -23,7 +24,7 @@ exports.getAllUsers = async (req, res) => {
       .select("-passwordHash -__v")
       .populate("charity.charityId", "name category");
 
-    res.json(users);
+    res.json(users.map((user) => sanitizeUser(user)));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -39,7 +40,7 @@ exports.getCurrentUser = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json(user);
+    res.json(sanitizeUser(user));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -59,7 +60,7 @@ exports.getUserById = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json(user);
+    res.json(sanitizeUser(user));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,5 +1,6 @@
 const User = require("../models/user");
 const { getUser } = require("../service/auth");
+const { isAdminEmail } = require("../service/adminAccess");
 const { syncSubscriptionState } = require("../service/subscription");
 
 const buildRequestUser = async (decoded) => {
@@ -15,7 +16,10 @@ const buildRequestUser = async (decoded) => {
     id: syncedUser._id.toString(),
     _id: syncedUser._id.toString(),
     email: syncedUser.email,
-    role: syncedUser.role,
+    role:
+      String(syncedUser.role || "").toLowerCase() === "admin" || isAdminEmail(syncedUser.email)
+        ? "admin"
+        : syncedUser.role,
     subscription: syncedUser.subscription,
     charity: syncedUser.charity,
   };

@@ -3,11 +3,12 @@ const mongoose = require("mongoose");
 const User = require("../models/user");
 const Charity = require("../models/charity");
 const { setUser } = require("../service/auth");
+const { applyAdminRole } = require("../service/adminAccess");
 const { sendWelcomeNotification } = require("../service/notifications");
 
 const sanitizeUser = (user) => {
   if (!user) return null;
-  const userObj = user.toObject({ getters: false });
+  const userObj = applyAdminRole(user);
   delete userObj.passwordHash;
   delete userObj.__v;
   return userObj;
