@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
 const User = require("../models/user");
 const Charity = require("../models/charity");
 const { setUser } = require("../service/auth");
@@ -24,8 +25,9 @@ exports.signup = async (req, res) => {
       contributionPercent = 10,
       subscriptionPlan = "monthly"
     } = req.body;
+    const normalizedCharityId = String(charityId || "").trim();
 
-    if (!firstName || !lastName || !username || !email || !password || !charityId) {
+    if (!firstName || !lastName || !username || !email || !password || !normalizedCharityId) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
@@ -40,11 +42,24 @@ exports.signup = async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    if (charityId) {
-      const charity = await Charity.findById(charityId);
-      if (!charity) {
-        return res.status(404).json({ message: "Selected charity not found" });
-      }
+    if (!mongoose.Types.ObjectId.isValid(normalizedCharityId)) {
+      return res.status(400).json({ message: "Please select a valid charity" });
+    }
+
+    const charity = await Charity.findOne({
+      _id: normalizedCharityId,
+      active: true,
+    });
+
+    if (!charity) {
+      const availableCharities = await Charity.countDocuments({ active: true });
+
+      return res.status(404).json({
+        message:
+          availableCharities > 0
+            ? "Selected charity is no longer available. Please choose again."
+            : "No active charities are available right now.",
+      });
     }
 
     const user = new User({
@@ -60,7 +75,7 @@ exports.signup = async (req, res) => {
         autoRenew: true
       },
       charity: {
-        charityId,
+        charityId: normalizedCharityId,
         contributionPercent: Math.max(10, Number(contributionPercent || 10))
       }
     });

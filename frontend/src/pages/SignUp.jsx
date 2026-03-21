@@ -63,6 +63,16 @@ export default function SignUp() {
       return;
     }
 
+    const selectedCharityStillExists = charities.some((charity) => charity._id === form.charityId);
+
+    if (!selectedCharityStillExists) {
+      setStatus({
+        type: "error",
+        text: "The selected charity is no longer available. Please choose again.",
+      });
+      return;
+    }
+
     setLoading(true);
     setStatus(null);
 
