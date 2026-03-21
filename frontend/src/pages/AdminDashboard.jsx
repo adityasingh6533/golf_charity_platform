@@ -84,9 +84,10 @@ function UserCard({ user }) {
 
 function ResultRow({ entry, onVerify, onReject, onPaid }) {
   const user = normalizeUser(entry);
-  const canVerify = entry.prize > 0 && entry.status !== "verified" && entry.status !== "paid";
+  const hasProof = Boolean(entry.proofUrl);
+  const canVerify = entry.prize > 0 && hasProof && entry.status !== "verified" && entry.status !== "paid";
   const canPay = entry.prize > 0 && entry.status === "verified";
-  const canReject = entry.prize > 0 && entry.status !== "paid";
+  const canReject = entry.prize > 0 && hasProof && entry.status !== "paid";
 
   return (
     <div className="admin-result-row">
@@ -98,6 +99,13 @@ function ResultRow({ entry, onVerify, onReject, onPaid }) {
           <div className="admin-result-proof">
             {entry.proofUrl ? "Proof submitted" : "Proof missing"}{entry.proofNote ? ` • ${entry.proofNote}` : ""}
           </div>
+          {entry.proofUrl ? (
+            <div className="admin-result-proof">
+              <a href={entry.proofUrl} target="_blank" rel="noreferrer">
+                Open submitted proof
+              </a>
+            </div>
+          ) : null}
         </div>
       </div>
 

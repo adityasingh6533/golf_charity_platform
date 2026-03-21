@@ -1,5 +1,10 @@
 const Result = require("../models/result");
 
+const isValidProofReference = (value) => {
+  if (!value) return false;
+  return /^(https?:\/\/|data:image\/)/i.test(String(value).trim());
+};
+
 exports.getLeaderboard = async (req, res) => {
   try {
     const data = await Result.find()
@@ -36,6 +41,8 @@ exports.submitWinnerProof = async (req, res) => {
   try {
     const { resultId } = req.params;
     const { proofUrl = "", proofNote = "" } = req.body;
+    const normalizedProofUrl = String(proofUrl || "").trim();
+    const normalizedProofNote = String(proofNote || "").trim();
 
     const result = await Result.findById(resultId);
 
@@ -51,8 +58,18 @@ exports.submitWinnerProof = async (req, res) => {
       return res.status(400).json({ message: "Only winners can submit proof" });
     }
 
-    result.proofUrl = proofUrl;
-    result.proofNote = proofNote;
+    if (!isValidProofReference(normalizedProofUrl)) {
+      return res.status(400).json({
+        message: "Provide a valid screenshot link or image data reference for proof",
+      });
+    }
+
+    if (result.status === "paid") {
+      return res.status(400).json({ message: "Paid winners cannot resubmit proof" });
+    }
+
+    result.proofUrl = normalizedProofUrl;
+    result.proofNote = normalizedProofNote;
     result.status = "pending";
     await result.save();
 

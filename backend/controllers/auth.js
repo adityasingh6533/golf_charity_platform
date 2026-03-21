@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/user");
 const Charity = require("../models/charity");
 const { setUser } = require("../service/auth");
+const { sendWelcomeNotification } = require("../service/notifications");
 
 const sanitizeUser = (user) => {
   if (!user) return null;
@@ -66,6 +67,7 @@ exports.signup = async (req, res) => {
 
     const savedUser = await user.save();
     const token = setUser(savedUser);
+    sendWelcomeNotification(savedUser);
 
     res.status(201).json({
       message: "Account created",

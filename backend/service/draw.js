@@ -3,6 +3,7 @@ const Result = require("../models/result");
 const Score = require("../models/score");
 const User = require("../models/user");
 const { PLAN_AMOUNTS } = require("./subscription");
+const { sendDrawResultNotification } = require("./notifications");
 
 const createRandomDrawNumbers = () => {
   const numbers = new Set();
@@ -114,6 +115,7 @@ const executeDraw = async (mode = "random") => {
     });
 
     results.push(result);
+    sendDrawResultNotification({ user: participant.user, result });
   }
 
   return {

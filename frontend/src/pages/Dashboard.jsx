@@ -198,6 +198,11 @@ export default function Dashboard() {
     loadDashboardData();
   }, [authUser, loadDashboardData]);
 
+  useEffect(() => {
+    setProofUrl(latestResult?.proofUrl || "");
+    setProofNote(latestResult?.proofNote || "");
+  }, [latestResult]);
+
   const currentEntries = scoreInputs
     .map((value) => Number(value))
     .filter((value) => Number.isFinite(value) && value > 0 && value <= 45)
@@ -619,13 +624,13 @@ export default function Dashboard() {
                 </div>
 
                 <label className="dashboard-label">
-                  <span>Proof URL</span>
+                  <span>Screenshot URL</span>
                   <input
                     className="dashboard-input"
                     type="text"
                     value={proofUrl}
                     onChange={(event) => setProofUrl(event.target.value)}
-                    placeholder="Paste screenshot or drive link"
+                    placeholder="Paste the golf platform screenshot link"
                   />
                 </label>
 
@@ -640,7 +645,7 @@ export default function Dashboard() {
                 </label>
 
                 <button className="submit-scores-btn" onClick={handleProofSubmit} disabled={submittingProof}>
-                  {submittingProof ? "Submitting..." : "Submit Winner Proof"}
+                  {submittingProof ? "Submitting..." : latestResult.proofUrl ? "Update Winner Proof" : "Submit Winner Proof"}
                 </button>
               </div>
             ) : (

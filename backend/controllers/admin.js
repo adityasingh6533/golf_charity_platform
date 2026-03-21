@@ -3,11 +3,21 @@ const Result = require("../models/result");
 const Draw = require("../models/draw");
 const Charity = require("../models/charity");
 const { executeDraw } = require("../service/draw");
+const { sendWinnerStatusNotification } = require("../service/notifications");
 
 const getCharityContributionAmount = (user) => {
   const amount = Number(user?.subscription?.amount || 0);
   const percent = Number(user?.charity?.contributionPercent || 10);
   return Number(((amount * percent) / 100).toFixed(2));
+};
+
+const ensureWinningResult = (result, res) => {
+  if (Number(result?.prize || 0) <= 0) {
+    res.status(400).json({ message: "Only winner records can be reviewed" });
+    return false;
+  }
+
+  return true;
 };
 
 exports.runDraw = async (req, res) => {
@@ -111,6 +121,18 @@ exports.verifyWinner = async (req, res) => {
       return res.status(404).json({ message: "Result not found" });
     }
 
+    if (!ensureWinningResult(result, res)) {
+      return;
+    }
+
+    if (!result.proofUrl) {
+      return res.status(400).json({ message: "Proof submission is required before verification" });
+    }
+
+    if (result.status === "paid") {
+      return res.status(400).json({ message: "Paid winners cannot be reviewed again" });
+    }
+
     result.status = "verified";
     result.adminNote = req.body.adminNote || result.adminNote;
     result.reviewedAt = new Date();
@@ -120,6 +142,7 @@ exports.verifyWinner = async (req, res) => {
       "userId",
       "firstName lastName email username"
     );
+    sendWinnerStatusNotification({ user: populated.userId, result: populated, status: "verified" });
     res.json(populated);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -134,6 +157,18 @@ exports.rejectWinner = async (req, res) => {
       return res.status(404).json({ message: "Result not found" });
     }
 
+    if (!ensureWinningResult(result, res)) {
+      return;
+    }
+
+    if (!result.proofUrl) {
+      return res.status(400).json({ message: "Reject actions apply to submitted proof only" });
+    }
+
+    if (result.status === "paid") {
+      return res.status(400).json({ message: "Paid winners cannot be rejected" });
+    }
+
     result.status = "rejected";
     result.adminNote = req.body.adminNote || "Proof rejected";
     result.reviewedAt = new Date();
@@ -143,6 +178,7 @@ exports.rejectWinner = async (req, res) => {
       "userId",
       "firstName lastName email username"
     );
+    sendWinnerStatusNotification({ user: populated.userId, result: populated, status: "rejected" });
     res.json(populated);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -157,6 +193,14 @@ exports.markAsPaid = async (req, res) => {
       return res.status(404).json({ message: "Result not found" });
     }
 
+    if (!ensureWinningResult(result, res)) {
+      return;
+    }
+
+    if (result.status !== "verified") {
+      return res.status(400).json({ message: "Only verified winners can be marked as paid" });
+    }
+
     result.status = "paid";
     result.adminNote = req.body.adminNote || result.adminNote;
     result.reviewedAt = result.reviewedAt || new Date();
@@ -167,6 +211,7 @@ exports.markAsPaid = async (req, res) => {
       "userId",
       "firstName lastName email username"
     );
+    sendWinnerStatusNotification({ user: populated.userId, result: populated, status: "paid" });
     res.json(populated);
   } catch (error) {
     res.status(500).json({ message: error.message });

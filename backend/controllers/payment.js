@@ -1,5 +1,6 @@
 const Payment = require("../models/payment");
 const { PLAN_AMOUNTS, activateSubscriptionForPayment } = require("../service/subscription");
+const { sendSubscriptionActivatedNotification } = require("../service/notifications");
 
 exports.getMyPayments = async (req, res) => {
   try {
@@ -19,6 +20,7 @@ exports.checkout = async (req, res) => {
     }
 
     const { user, payment } = await activateSubscriptionForPayment(req.user.id, plan, "activation");
+    sendSubscriptionActivatedNotification(user, payment);
 
     res.status(201).json({
       message: `${plan === "yearly" ? "Yearly" : "Monthly"} subscription activated successfully`,
