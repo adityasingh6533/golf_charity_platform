@@ -16,6 +16,28 @@ const { enforceHttps, applySecurityHeaders } = require("./middleware/security");
 
 const MONGO_URL =
   (process.env.MONGO_URL || "mongodb://127.0.0.1:27017/golf_charity_platform").trim();
+const allowedOrigins = String(process.env.CORS_ORIGIN || "*")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("CORS origin not allowed"));
+  },
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: !allowedOrigins.includes("*"),
+  optionsSuccessStatus: 204,
+};
 
 let bootstrapPromise = null;
 
@@ -37,7 +59,8 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(enforceHttps);
 app.use(applySecurityHeaders);
-app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
