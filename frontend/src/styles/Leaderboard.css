@@ -186,6 +186,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .leaderboard-panel-head h2 {
@@ -435,6 +436,7 @@
   font-size: 1.12rem;
   font-weight: 900;
   color: #67e8f9;
+  word-break: break-word;
 }
 
 .leaderboard-empty {
@@ -513,5 +515,48 @@
   .leaderboard-primary-btn,
   .leaderboard-secondary-btn {
     width: 100%;
+  }
+
+  .leaderboard-hero-copy h1 {
+    font-size: clamp(2.1rem, 12vw, 3rem);
+  }
+
+  .leaderboard-panel-head h2 {
+    font-size: 1.45rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .leaderboard-page {
+    padding: 18px 12px 28px;
+  }
+
+  .leaderboard-hero,
+  .leaderboard-panel {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .leaderboard-entry {
+    padding: 14px;
+  }
+
+  .leaderboard-entry-main {
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .leaderboard-entry-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .leaderboard-entry-rank {
+    min-width: 36px;
+  }
+
+  .leaderboard-badge {
+    white-space: normal;
   }
 }

@@ -197,6 +197,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .admin-command-head {
@@ -403,6 +404,8 @@
 .admin-directory-item {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 14px 16px;
   border-radius: 18px;
@@ -581,6 +584,7 @@
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .admin-action-btn {
@@ -645,6 +649,86 @@
   gap: 10px;
 }
 
+.admin-draw-preview {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(9, 18, 34, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-draw-preview-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: rgba(236, 243, 255, 0.9);
+}
+
+.admin-draw-preview-head span,
+.admin-draw-preview-grid span {
+  color: rgba(214, 225, 248, 0.64);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+
+.admin-draw-balls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.admin-draw-ball {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  color: #ffffff;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.34), rgba(20, 184, 166, 0.92) 35%, rgba(59, 130, 246, 0.3) 72%);
+  box-shadow: 0 0 22px rgba(34, 211, 238, 0.18);
+}
+
+.admin-draw-preview-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-draw-preview-grid div {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(5, 12, 24, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-draw-preview-grid strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 1.05rem;
+}
+
+.admin-directory-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-directory-copy span {
+  color: rgba(214, 225, 248, 0.64);
+}
+
+.admin-directory-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 1100px) {
   .admin-hero,
   .admin-overview-grid {
@@ -653,6 +737,10 @@
 
   .admin-featured-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-draw-preview-grid {
+    grid-template-columns: 1fr;
   }
 
   .admin-result-row {
@@ -739,6 +827,47 @@
 
   .admin-primary-btn,
   .admin-secondary-btn {
+    width: 100%;
+  }
+
+  .admin-command-head,
+  .admin-panel-head {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-page {
+    padding: 18px 12px 28px;
+  }
+
+  .admin-hero-copy,
+  .admin-command-card,
+  .admin-panel {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .admin-title {
+    font-size: clamp(2rem, 12vw, 2.6rem);
+  }
+
+  .admin-mode-select {
+    max-width: none;
+  }
+
+  .admin-result-row,
+  .admin-directory-item,
+  .admin-charity-breakdown-item,
+  .admin-user-card {
+    padding: 12px;
+  }
+
+  .admin-result-actions {
+    flex-direction: column;
+  }
+
+  .admin-action-btn {
     width: 100%;
   }
 }

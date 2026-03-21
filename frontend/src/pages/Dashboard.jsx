@@ -48,8 +48,21 @@ function formatDate(value) {
   });
 }
 
-function getTodayISODate() {
-  return new Date().toISOString();
+function toDateInputValue(value = new Date()) {
+  const date = new Date(value);
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function normalizeScoreEntries(entries) {
+  return (Array.isArray(entries) ? entries : [])
+    .map((entry) => ({
+      value: String(entry?.value ?? ""),
+      date: toDateInputValue(entry?.date || new Date()),
+    }))
+    .filter((entry) => Number(entry.value) > 0)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
 }
 
 function summarizeResults(allResults) {
@@ -60,6 +73,8 @@ function summarizeResults(allResults) {
       result: "No draw yet",
       draw: [],
       latest: null,
+      drawsEntered: 0,
+      upcomingStatus: "No completed draws yet",
     };
   }
 
@@ -78,6 +93,8 @@ function summarizeResults(allResults) {
     result,
     draw: Array.isArray(latest.draw) ? latest.draw : [],
     latest,
+    drawsEntered: allResults.length,
+    upcomingStatus: "Waiting for next admin-published monthly draw",
   };
 }
 
@@ -85,16 +102,19 @@ export default function Dashboard() {
   const authUser = useMemo(() => safeParseAuthUser(), []);
   const [currentUser, setCurrentUser] = useState(authUser);
   const [charities, setCharities] = useState([]);
-  const [scoreInputs, setScoreInputs] = useState(["", "", "", "", ""]);
-  const [scoreHistory, setScoreHistory] = useState([]);
+  const [scoreEntries, setScoreEntries] = useState([]);
+  const [scoreForm, setScoreForm] = useState({
+    value: "",
+    date: toDateInputValue(),
+  });
   const [winnings, setWinnings] = useState(0);
   const [draw, setDraw] = useState([]);
   const [matchCount, setMatchCount] = useState(0);
   const [resultLabel, setResultLabel] = useState("No draw yet");
   const [latestResult, setLatestResult] = useState(null);
-  const [drawMode, setDrawMode] = useState("random");
+  const [drawsEntered, setDrawsEntered] = useState(0);
+  const [upcomingDrawStatus, setUpcomingDrawStatus] = useState("No completed draws yet");
   const [savingScores, setSavingScores] = useState(false);
-  const [loadingDraw, setLoadingDraw] = useState(false);
   const [savingCharity, setSavingCharity] = useState(false);
   const [savingSubscription, setSavingSubscription] = useState(false);
   const [submittingProof, setSubmittingProof] = useState(false);
@@ -156,17 +176,14 @@ export default function Dashboard() {
       setCurrentUser(profile);
       syncAuthUser(profile);
       setCharities(charityList);
-      setScoreHistory(Array.isArray(scoreDoc?.entries) ? scoreDoc.entries : []);
-      setScoreInputs(
-        Array.isArray(scoreDoc?.entries)
-          ? [...scoreDoc.entries.map((entry) => String(entry.value)), "", "", "", "", ""].slice(0, 5)
-          : ["", "", "", "", ""]
-      );
+      setScoreEntries(normalizeScoreEntries(scoreDoc?.entries));
       setWinnings(summary.winnings);
       setMatchCount(summary.matchCount);
       setResultLabel(summary.result);
       setDraw(summary.draw);
       setLatestResult(summary.latest);
+      setDrawsEntered(summary.drawsEntered);
+      setUpcomingDrawStatus(summary.upcomingStatus);
       setPayments(paymentHistory);
       setCharityForm({
         charityId: profile?.charity?.charityId?._id || profile?.charity?.charityId || "",
@@ -203,24 +220,46 @@ export default function Dashboard() {
     setProofNote(latestResult?.proofNote || "");
   }, [latestResult]);
 
-  const currentEntries = scoreInputs
-    .map((value) => Number(value))
-    .filter((value) => Number.isFinite(value) && value > 0 && value <= 45)
-    .slice(0, 5)
-    .map((value) => ({
-      value,
-      date: getTodayISODate(),
-    }));
-
   const charityName =
     currentUser?.charity?.charityId?.name ||
     charities.find((entry) => entry._id === charityForm.charityId)?.name ||
     "No charity selected";
 
-  const handleScoreChange = (index, value) => {
-    const next = [...scoreInputs];
-    next[index] = value;
-    setScoreInputs(next);
+  const handleAddScore = () => {
+    const numericValue = Number(scoreForm.value);
+
+    if (!Number.isFinite(numericValue) || numericValue < 1 || numericValue > 45 || !scoreForm.date) {
+      setStatusMessage("Add a valid Stableford score between 1 and 45 with a date.");
+      return;
+    }
+
+    const nextEntries = normalizeScoreEntries([
+      ...scoreEntries,
+      { value: numericValue, date: scoreForm.date },
+    ]);
+
+    setScoreEntries(nextEntries);
+    setScoreForm({
+      value: "",
+      date: toDateInputValue(),
+    });
+    setStatusMessage(
+      nextEntries.length === 5
+        ? "Latest 5 scores ready. Saving will replace the oldest one automatically."
+        : "Score added to your latest-5 list."
+    );
+  };
+
+  const handleScoreEntryChange = (index, field, value) => {
+    setScoreEntries((prev) =>
+      prev.map((entry, entryIndex) =>
+        entryIndex === index ? { ...entry, [field]: value } : entry
+      )
+    );
+  };
+
+  const handleRemoveScore = (index) => {
+    setScoreEntries((prev) => prev.filter((_, entryIndex) => entryIndex !== index));
   };
 
   const handleSubmitScores = async () => {
@@ -229,8 +268,13 @@ export default function Dashboard() {
       return;
     }
 
+    const currentEntries = normalizeScoreEntries(scoreEntries).map((entry) => ({
+      value: Number(entry.value),
+      date: entry.date,
+    }));
+
     if (!currentEntries.length) {
-      setStatusMessage("Enter up to 5 valid Stableford scores between 1 and 45.");
+      setStatusMessage("Add at least one valid score before saving.");
       return;
     }
 
@@ -245,7 +289,7 @@ export default function Dashboard() {
         userId: currentUserId,
         scores: currentEntries,
       });
-      setStatusMessage("Scores saved and ready for the next draw.");
+      setStatusMessage("Latest scores saved in reverse chronological order.");
       await loadDashboardData();
     } catch (error) {
       console.log(error);
@@ -315,21 +359,6 @@ export default function Dashboard() {
     }
   };
 
-  const generateDraw = async () => {
-    try {
-      setLoadingDraw(true);
-      const drawRes = await API.post("/draw/run-draw", { mode: drawMode });
-      setDraw(drawRes.data.drawNumbers || []);
-      setStatusMessage(`Draw completed in ${drawRes.data.mode || drawMode} mode.`);
-      await loadDashboardData();
-    } catch (error) {
-      console.log(error);
-      setStatusMessage(error?.response?.data?.message || error.message || "Draw failed");
-    } finally {
-      setLoadingDraw(false);
-    }
-  };
-
   const handleProofSubmit = async () => {
     if (!latestResult?._id) return;
 
@@ -370,17 +399,17 @@ export default function Dashboard() {
           </div>
 
           <div className="dashboard-actions">
-            <button className="view-dashboard-btn" onClick={() => window.location.href = "/"}>
+            <button className="view-dashboard-btn" onClick={() => (window.location.href = "/")}>
               Home
             </button>
-            <button className="leaderboard-btn" onClick={() => window.location.href = "/charities"}>
+            <button className="leaderboard-btn" onClick={() => (window.location.href = "/charities")}>
               Charities
             </button>
-            <button className="leaderboard-btn" onClick={() => window.location.href = "/leaderboard"}>
+            <button className="leaderboard-btn" onClick={() => (window.location.href = "/leaderboard")}>
               Leaderboard
             </button>
             {String(currentUser?.role || "").toLowerCase() === "admin" && (
-              <button className="leaderboard-btn" onClick={() => window.location.href = "/admin"}>
+              <button className="leaderboard-btn" onClick={() => (window.location.href = "/admin")}>
                 Admin
               </button>
             )}
@@ -454,30 +483,67 @@ export default function Dashboard() {
             <div className="dashboard-section-head">
               <div>
                 <h2 className="card-title">Score Management</h2>
-                <p className="dashboard-helper">Save your latest 5 Stableford scores with fresh dates.</p>
+                <p className="dashboard-helper">
+                  Add dated Stableford scores. The latest 5 are retained automatically.
+                </p>
               </div>
+              <span className="dashboard-chip">{scoreEntries.length}/5 saved locally</span>
             </div>
 
-            <div className="score-chip-row">
-              {[0, 1, 2, 3, 4].map((index) => (
-                <input
-                  key={index}
-                  className="score-chip"
-                  type="number"
-                  min="1"
-                  max="45"
-                  value={scoreInputs[index]}
-                  onChange={(event) => handleScoreChange(index, event.target.value)}
-                />
-              ))}
+            <div className="dashboard-score-form">
+              <input
+                className="score-chip"
+                type="number"
+                min="1"
+                max="45"
+                value={scoreForm.value}
+                onChange={(event) =>
+                  setScoreForm((prev) => ({ ...prev, value: event.target.value }))
+                }
+                placeholder="Score"
+              />
+              <input
+                className="dashboard-input dashboard-date-input"
+                type="date"
+                value={scoreForm.date}
+                onChange={(event) =>
+                  setScoreForm((prev) => ({ ...prev, date: event.target.value }))
+                }
+              />
+              <button className="details-btn" onClick={handleAddScore}>
+                Add Score
+              </button>
             </div>
 
             <div className="score-history">
-              {scoreHistory.length ? (
-                scoreHistory.map((entry, index) => (
+              {scoreEntries.length ? (
+                scoreEntries.map((entry, index) => (
                   <div key={`${entry.value}-${entry.date}-${index}`} className="score-history-item">
                     <div className="score-history-value">{entry.value}</div>
-                    <div>{formatDate(entry.date)}</div>
+                    <div className="dashboard-score-entry-fields">
+                      <input
+                        className="dashboard-input"
+                        type="number"
+                        min="1"
+                        max="45"
+                        value={entry.value}
+                        onChange={(event) =>
+                          handleScoreEntryChange(index, "value", event.target.value)
+                        }
+                      />
+                      <input
+                        className="dashboard-input"
+                        type="date"
+                        value={entry.date}
+                        onChange={(event) =>
+                          handleScoreEntryChange(index, "date", event.target.value)
+                        }
+                      />
+                    </div>
+                    <div className="score-history-date">{formatDate(entry.date)}</div>
+                    <button className="dashboard-inline-remove" onClick={() => handleRemoveScore(index)}>
+                      Remove
+                    </button>
                   </div>
                 ))
               ) : (
@@ -551,23 +617,11 @@ export default function Dashboard() {
           <section className="dashboard-card winners-card">
             <div className="dashboard-section-head">
               <div>
-                <h2 className="card-title">Draw & Rewards</h2>
-                <p className="dashboard-helper">Run a local draw and track your most recent payout journey.</p>
+                <h2 className="card-title">Participation Summary</h2>
+                <p className="dashboard-helper">
+                  Admin controls official publishing. You can track your latest draw status here.
+                </p>
               </div>
-            </div>
-
-            <div className="dashboard-inline-selectors">
-              <label className="dashboard-label compact">
-                <span>Draw Mode</span>
-                <select
-                  className="dashboard-select"
-                  value={drawMode}
-                  onChange={(event) => setDrawMode(event.target.value)}
-                >
-                  <option value="random">Random</option>
-                  <option value="algorithm">Algorithm</option>
-                </select>
-              </label>
             </div>
 
             <div className="draw-numbers">
@@ -578,11 +632,15 @@ export default function Dashboard() {
                   </div>
                 ))
               ) : (
-                <div className="dashboard-helper">No draw generated yet.</div>
+                <div className="dashboard-helper">Official draw numbers will appear after the next published draw.</div>
               )}
             </div>
 
             <div className="dashboard-result-grid">
+              <div className="dashboard-mini-card">
+                <span>Draws Entered</span>
+                <strong>{drawsEntered}</strong>
+              </div>
               <div className="dashboard-mini-card">
                 <span>Latest Result</span>
                 <strong>{resultLabel}</strong>
@@ -591,16 +649,11 @@ export default function Dashboard() {
                 <span>Match Count</span>
                 <strong>{matchCount}</strong>
               </div>
-              <div className="dashboard-mini-card">
-                <span>Total Winnings</span>
-                <strong>{formatCurrency(winnings)}</strong>
-              </div>
             </div>
 
-            <div className="draw-footer">
-              <button className="details-btn" onClick={generateDraw} disabled={loadingDraw || !isActiveSubscription}>
-                {loadingDraw ? "Generating..." : "Generate Monthly Draw"}
-              </button>
+            <div className="dashboard-impact-card dashboard-impact-card--spaced">
+              <strong>{isActiveSubscription ? "Eligible for next draw" : "Inactive membership"}</strong>
+              <span>{isActiveSubscription ? upcomingDrawStatus : "Activate a plan to join upcoming draws."}</span>
             </div>
           </section>
 

@@ -15,7 +15,15 @@ const normalizeEntries = (scores) => {
         date: new Date(),
       };
     })
-    .filter((entry) => Number.isFinite(entry.value) && entry.value > 0 && entry.value <= 45)
+    .filter(
+      (entry) =>
+        Number.isFinite(entry.value) &&
+        entry.value > 0 &&
+        entry.value <= 45 &&
+        entry.date instanceof Date &&
+        !Number.isNaN(entry.date.getTime())
+    )
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
     .slice(0, 5);
 };
 
@@ -43,7 +51,6 @@ exports.saveScore = async (req, res) => {
         userId,
         scores: entries.map((entry) => entry.value),
         entries,
-        createdAt: new Date(),
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );

@@ -2,7 +2,7 @@ const User = require("../models/user");
 const Result = require("../models/result");
 const Draw = require("../models/draw");
 const Charity = require("../models/charity");
-const { executeDraw } = require("../service/draw");
+const { buildDrawSummary, executeDraw } = require("../service/draw");
 const { sendWinnerStatusNotification } = require("../service/notifications");
 
 const getCharityContributionAmount = (user) => {
@@ -23,10 +23,12 @@ const ensureWinningResult = (result, res) => {
 exports.runDraw = async (req, res) => {
   try {
     const mode = String(req.body?.mode || "random").toLowerCase();
-    const summary = await executeDraw(mode);
+    const simulation = Boolean(req.body?.simulation);
+    const summary = simulation ? await buildDrawSummary(mode) : await executeDraw(mode);
 
     res.json({
-      message: "Draw executed successfully",
+      message: simulation ? "Draw simulation generated successfully" : "Draw published successfully",
+      simulation,
       drawNumbers: summary.drawNumbers,
       mode: summary.mode,
       participants: summary.participants,

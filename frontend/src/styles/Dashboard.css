@@ -2,6 +2,8 @@
 .stats-bar {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 20px;
   padding: 12px 20px;
 
@@ -27,6 +29,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 14px;
   padding: 12px 14px;
   border-radius: 16px;
@@ -137,6 +140,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .welcome {
@@ -276,11 +281,12 @@
 .score-chip-row {
   display: flex;
   gap: 14px;
+  flex-wrap: wrap;
   margin: 10px 0 18px;
 }
 
 .score-chip {
-  width: 64px;
+  width: min(64px, calc(20% - 12px));
   height: 46px;
   text-align: center;
   border-radius: 16px;
@@ -356,6 +362,7 @@
 .draw-numbers {
   display: flex;
   gap: 14px;
+  flex-wrap: wrap;
   margin: 16px 0 18px;
 }
 
@@ -762,6 +769,7 @@
   display: flex;
   gap: 14px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .dashboard-result-grid {
@@ -808,11 +816,49 @@
 .dashboard-payment-row {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 12px 14px;
   border-radius: 16px;
   background: rgba(9, 18, 34, 0.76);
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-score-form {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+  gap: 12px;
+  margin: 10px 0 18px;
+}
+
+.dashboard-date-input {
+  min-height: 48px;
+}
+
+.dashboard-score-entry-fields {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px;
+  flex: 1;
+}
+
+.dashboard-inline-remove {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  background: rgba(127, 29, 29, 0.3);
+  color: rgba(254, 226, 226, 0.95);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.dashboard-inline-remove:hover {
+  transform: translateY(-1px);
+}
+
+.dashboard-impact-card--spaced {
+  margin-top: 16px;
 }
 
 @media (max-width: 860px) {
@@ -823,6 +869,7 @@
 
   .dashboard-actions {
     width: 100%;
+    justify-content: stretch;
   }
 
   .view-dashboard-btn,
@@ -830,6 +877,7 @@
   .logout-btn {
     flex: 1;
     text-align: center;
+    min-width: 140px;
   }
 
   .dashboard-grid {
@@ -866,7 +914,126 @@
     grid-template-columns: 1fr;
   }
 
+  .dashboard-score-form,
+  .dashboard-score-entry-fields {
+    grid-template-columns: 1fr;
+  }
+
   .dashboard-section-head {
     flex-direction: column;
+  }
+
+  .stats-bar {
+    padding: 12px 14px;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-page {
+    padding: 24px 14px;
+  }
+
+  .dashboard-card {
+    padding: 20px;
+    min-height: unset;
+    border-radius: 20px;
+  }
+
+  .welcome {
+    align-items: flex-start;
+  }
+
+  .welcome-text h1 {
+    font-size: 1.75rem;
+  }
+
+  .progress {
+    width: 140px;
+  }
+
+  .score-chip-row {
+    gap: 10px;
+  }
+
+  .score-chip {
+    width: calc(33.333% - 8px);
+    min-width: 0;
+  }
+
+  .dashboard-inline-actions,
+  .draw-footer {
+    justify-content: stretch;
+  }
+
+  .dashboard-inline-remove {
+    width: 100%;
+  }
+
+  .dashboard-inline-actions .details-btn,
+  .dashboard-inline-actions .manage-btn,
+  .draw-footer .details-btn {
+    width: 100%;
+  }
+
+  .dashboard-label.compact {
+    max-width: none;
+    width: 100%;
+  }
+
+  .dashboard-inline-selectors {
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-page {
+    padding: 18px 12px;
+  }
+
+  .dashboard-top {
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+
+  .dashboard-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .stats-bar {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .dashboard-actions {
+    gap: 10px;
+  }
+
+  .view-dashboard-btn,
+  .leaderboard-btn,
+  .logout-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .score-chip {
+    width: calc(50% - 6px);
+  }
+
+  .ball {
+    width: 46px;
+    height: 46px;
+    font-size: 16px;
+  }
+
+  .score-history-value {
+    min-width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+
+  .score-history-date {
+    width: 100%;
+    text-align: left;
   }
 }

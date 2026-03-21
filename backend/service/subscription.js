@@ -1,5 +1,6 @@
 const User = require("../models/user");
 const Payment = require("../models/payment");
+const Donation = require("../models/donation");
 
 const PLAN_DAYS = {
   monthly: 30,
@@ -17,6 +18,30 @@ const addDays = (date, days) => {
 
 const createTransactionRef = (plan) => {
   return `LOCAL-${plan.toUpperCase()}-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+};
+
+const createSubscriptionDonation = async (user, payment) => {
+  const charityId = user?.charity?.charityId;
+  const contributionPercent = Number(user?.charity?.contributionPercent || 0);
+
+  if (!charityId || contributionPercent < 10) {
+    return null;
+  }
+
+  const amount = Number((((Number(payment?.amount || 0) || 0) * contributionPercent) / 100).toFixed(2));
+  if (amount < 1) {
+    return null;
+  }
+
+  return Donation.create({
+    userId: user._id,
+    charityId,
+    donorName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || "Subscriber",
+    donorEmail: user.email || "",
+    amount,
+    note: `${payment?.type || "subscription"} contribution from ${payment?.plan || user?.subscription?.plan || "membership"} plan`,
+    source: "subscription",
+  });
 };
 
 const syncSubscriptionState = async (userInput) => {
@@ -45,6 +70,8 @@ const syncSubscriptionState = async (userInput) => {
         paidAt: now,
         metadata: { autoRenew: true },
       });
+
+      await createSubscriptionDonation(user, payment);
 
       user.subscription.amount = amount;
       user.subscription.startedAt = renewalDate;
@@ -99,6 +126,8 @@ const activateSubscriptionForPayment = async (userId, plan, paymentType = "activ
     transactionRef: createTransactionRef(plan),
     paidAt: now,
   });
+
+  await createSubscriptionDonation(user, payment);
 
   return { user, payment };
 };

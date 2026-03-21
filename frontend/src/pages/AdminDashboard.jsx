@@ -52,6 +52,17 @@ function statusLabel(status) {
   return "Lost";
 }
 
+function createInitialCharityForm() {
+  return {
+    name: "",
+    category: "Community",
+    location: "India",
+    description: "",
+    impact: "",
+    featured: false,
+  };
+}
+
 function StatCard({ label, value, tone, helper }) {
   return (
     <div className={`admin-stat-card admin-stat-card--${tone}`}>
@@ -97,7 +108,8 @@ function ResultRow({ entry, onVerify, onReject, onPaid }) {
           <div className="admin-result-name">{user.name}</div>
           <div className="admin-result-email">{user.email || "Player record"}</div>
           <div className="admin-result-proof">
-            {entry.proofUrl ? "Proof submitted" : "Proof missing"}{entry.proofNote ? ` • ${entry.proofNote}` : ""}
+            {entry.proofUrl ? "Proof submitted" : "Proof missing"}
+            {entry.proofNote ? ` • ${entry.proofNote}` : ""}
           </div>
           {entry.proofUrl ? (
             <div className="admin-result-proof">
@@ -160,14 +172,9 @@ export default function AdminDashboard() {
   const [drawStatus, setDrawStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [drawMode, setDrawMode] = useState("random");
-  const [charityForm, setCharityForm] = useState({
-    name: "",
-    category: "Community",
-    location: "India",
-    description: "",
-    impact: "",
-    featured: false,
-  });
+  const [drawPreview, setDrawPreview] = useState(null);
+  const [editingCharityId, setEditingCharityId] = useState("");
+  const [charityForm, setCharityForm] = useState(createInitialCharityForm());
 
   const refreshAll = async () => {
     const [usersRes, resultsRes, analyticsRes, charitiesRes] = await Promise.all([
@@ -198,12 +205,23 @@ export default function AdminDashboard() {
     });
   }, []);
 
-  const runDraw = async () => {
+  const executeDrawRequest = async (simulation) => {
     try {
       setLoading(true);
-      const res = await API.post("/admin/run-draw", { mode: drawMode });
-      setDrawStatus(res.data?.message || "Draw executed successfully");
-      await refreshAll();
+      const res = await API.post("/admin/run-draw", { mode: drawMode, simulation });
+      setDrawPreview({
+        drawNumbers: res.data?.drawNumbers || [],
+        mode: res.data?.mode || drawMode,
+        participants: res.data?.participants || 0,
+        totalPool: res.data?.totalPool || 0,
+        winners: res.data?.winners || { five: 0, four: 0, three: 0 },
+        simulation: Boolean(res.data?.simulation),
+      });
+      setDrawStatus(res.data?.message || (simulation ? "Simulation ready" : "Draw published"));
+
+      if (!simulation) {
+        await refreshAll();
+      }
     } catch (error) {
       console.log(error);
       setDrawStatus(error?.response?.data?.message || error.message || "Draw failed");
@@ -242,22 +260,52 @@ export default function AdminDashboard() {
     }
   };
 
-  const createCharity = async () => {
+  const resetCharityForm = () => {
+    setEditingCharityId("");
+    setCharityForm(createInitialCharityForm());
+  };
+
+  const saveCharity = async () => {
     try {
-      await API.post("/charities", charityForm);
-      setCharityForm({
-        name: "",
-        category: "Community",
-        location: "India",
-        description: "",
-        impact: "",
-        featured: false,
-      });
-      setDrawStatus("New charity added.");
+      if (editingCharityId) {
+        await API.put(`/charities/${editingCharityId}`, charityForm);
+        setDrawStatus("Charity updated.");
+      } else {
+        await API.post("/charities", charityForm);
+        setDrawStatus("New charity added.");
+      }
+
+      resetCharityForm();
       await refreshAll();
     } catch (error) {
       console.log(error);
-      setDrawStatus(error?.response?.data?.message || error.message || "Unable to create charity");
+      setDrawStatus(error?.response?.data?.message || error.message || "Unable to save charity");
+    }
+  };
+
+  const startEditingCharity = (charity) => {
+    setEditingCharityId(charity._id);
+    setCharityForm({
+      name: charity.name || "",
+      category: charity.category || "Community",
+      location: charity.location || "India",
+      description: charity.description || "",
+      impact: charity.impact || "",
+      featured: Boolean(charity.featured),
+    });
+  };
+
+  const deleteCharity = async (id) => {
+    try {
+      await API.delete(`/charities/${id}`);
+      if (editingCharityId === id) {
+        resetCharityForm();
+      }
+      setDrawStatus("Charity deleted.");
+      await refreshAll();
+    } catch (error) {
+      console.log(error);
+      setDrawStatus(error?.response?.data?.message || error.message || "Unable to delete charity");
     }
   };
 
@@ -276,8 +324,8 @@ export default function AdminDashboard() {
             <div className="admin-eyebrow">Control Room</div>
             <h1 className="admin-title">Admin Dashboard</h1>
             <p className="admin-subtitle">
-              Configure draw mode, manage local charity data, review proof submissions, and keep the
-              entire player economy moving from one cinematic control surface.
+              Configure draw mode, run safe simulations before publish, manage charity content, review
+              proof submissions, and keep the player economy moving from one control surface.
             </p>
 
             <div className="admin-hero-actions">
@@ -290,8 +338,11 @@ export default function AdminDashboard() {
                 <option value="algorithm">Algorithm Draw</option>
               </select>
 
-              <button className="admin-primary-btn" onClick={runDraw} disabled={loading}>
-                {loading ? "Running Draw..." : "Launch New Draw"}
+              <button className="admin-secondary-btn" onClick={() => executeDrawRequest(true)} disabled={loading}>
+                {loading ? "Working..." : "Run Simulation"}
+              </button>
+              <button className="admin-primary-btn" onClick={() => executeDrawRequest(false)} disabled={loading}>
+                {loading ? "Publishing..." : "Publish Draw"}
               </button>
               <button className="admin-secondary-btn" onClick={() => (window.location.href = "/dashboard")}>
                 Open Player View
@@ -314,8 +365,42 @@ export default function AdminDashboard() {
               <StatCard label="Registered Users" value={analytics?.totalUsers || users.length} helper="Complete player base" tone="cyan" />
               <StatCard label="Active Subscribers" value={analytics?.activeSubscribers || 0} helper="Eligible to compete" tone="blue" />
               <StatCard label="Pending Winners" value={analytics?.pendingVerifications || 0} helper="Need admin action" tone="pink" />
-              <StatCard label="Charity Total" value={formatCurrency(analytics?.charityContributionTotal || 0)} helper="Projected contributions" tone="green" />
+              <StatCard label="Charity Total" value={formatCurrency(analytics?.charityContributionTotal || 0)} helper="Tracked contribution ledger" tone="green" />
             </div>
+
+            {drawPreview ? (
+              <div className="admin-draw-preview">
+                <div className="admin-draw-preview-head">
+                  <strong>{drawPreview.simulation ? "Simulation Preview" : "Latest Published Draw"}</strong>
+                  <span>{drawPreview.mode} mode</span>
+                </div>
+
+                <div className="admin-draw-balls">
+                  {drawPreview.drawNumbers.map((number, index) => (
+                    <div key={`${number}-${index}`} className="admin-draw-ball">
+                      {number}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="admin-draw-preview-grid">
+                  <div>
+                    <span>Participants</span>
+                    <strong>{drawPreview.participants}</strong>
+                  </div>
+                  <div>
+                    <span>Total Pool</span>
+                    <strong>{formatCurrency(drawPreview.totalPool)}</strong>
+                  </div>
+                  <div>
+                    <span>5 / 4 / 3 Match</span>
+                    <strong>
+                      {drawPreview.winners.five} / {drawPreview.winners.four} / {drawPreview.winners.three}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -360,7 +445,7 @@ export default function AdminDashboard() {
                 })
               ) : (
                 <div className="admin-empty-state">
-                  No winning records yet. Run a draw after users submit scores to populate this area.
+                  No winning records yet. Publish a draw after users submit scores to populate this area.
                 </div>
               )}
             </div>
@@ -398,7 +483,7 @@ export default function AdminDashboard() {
             <div className="admin-panel-head">
               <div>
                 <div className="admin-panel-kicker">Charity Management</div>
-                <h2>Add Local Charity</h2>
+                <h2>{editingCharityId ? "Edit Charity" : "Add Local Charity"}</h2>
               </div>
               <div className="admin-panel-badge">{charities.length} charities</div>
             </div>
@@ -445,8 +530,13 @@ export default function AdminDashboard() {
             </div>
 
             <div className="admin-inline-actions">
-              <button className="admin-primary-btn" onClick={createCharity}>
-                Add Charity
+              {editingCharityId ? (
+                <button className="admin-secondary-btn" onClick={resetCharityForm}>
+                  Cancel Edit
+                </button>
+              ) : null}
+              <button className="admin-primary-btn" onClick={saveCharity}>
+                {editingCharityId ? "Save Changes" : "Add Charity"}
               </button>
             </div>
           </div>
@@ -462,8 +552,21 @@ export default function AdminDashboard() {
             <div className="admin-directory-list">
               {charities.map((charity) => (
                 <div key={charity._id} className="admin-directory-item">
-                  <strong>{charity.name}</strong>
-                  <span>{charity.category} • {charity.location}</span>
+                  <div className="admin-directory-copy">
+                    <strong>{charity.name}</strong>
+                    <span>
+                      {charity.category} • {charity.location}
+                    </span>
+                  </div>
+
+                  <div className="admin-directory-actions">
+                    <button className="admin-action-btn admin-action-btn--ghost" onClick={() => startEditingCharity(charity)}>
+                      Edit
+                    </button>
+                    <button className="admin-action-btn admin-action-btn--danger" onClick={() => deleteCharity(charity._id)}>
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

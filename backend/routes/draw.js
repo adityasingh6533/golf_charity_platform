@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { requireLogin, requireActiveSubscription } = require("../middleware/auth");
+const { requireLogin, requireAdmin } = require("../middleware/auth");
 const drawController = require("../controllers/draw");
 
-router.post("/run-draw", requireLogin, requireActiveSubscription, drawController.runDraw);
+router.post("/run-draw", requireLogin, requireAdmin, drawController.runDraw);
 
 module.exports = router;

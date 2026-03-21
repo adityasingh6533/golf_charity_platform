@@ -5,6 +5,7 @@
 body {
   font-family: "Poppins", sans-serif;
   color: #fff;
+  overflow-x: hidden;
 }
 
 .home {
@@ -127,6 +128,7 @@ body {
   max-width: 560px;
   color: rgba(224, 232, 248, 0.76);
   line-height: 1.9;
+  word-break: break-word;
 }
 
 .home-actions {
@@ -243,6 +245,7 @@ body {
   align-items: center;
   gap: 14px;
   font-weight: 700;
+  flex-wrap: wrap;
 }
 
 .home-step span {
@@ -267,6 +270,7 @@ body {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 16px;
   color: rgba(167, 243, 208, 0.9);
   font-size: 12px;
@@ -333,5 +337,51 @@ body {
 
   .home-btn {
     width: 100%;
+  }
+
+  .home-copy h1 {
+    font-size: clamp(2.2rem, 12vw, 3.2rem);
+  }
+
+  .home-panel-head h2 {
+    font-size: 1.55rem;
+  }
+
+  .home-stat strong {
+    font-size: 1.2rem;
+  }
+
+  .home-charity-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 520px) {
+  .home {
+    padding: 18px 12px 28px;
+  }
+
+  .home-hero,
+  .home-panel {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .home-actions {
+    gap: 10px;
+  }
+
+  .home-btn {
+    padding: 13px 16px;
+  }
+
+  .home-step {
+    align-items: flex-start;
+  }
+
+  .home-step span {
+    width: 38px;
+    height: 38px;
   }
 }

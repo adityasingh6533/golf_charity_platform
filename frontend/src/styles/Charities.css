@@ -31,6 +31,7 @@
   justify-content: space-between;
   gap: 18px;
   align-items: flex-end;
+  flex-wrap: wrap;
 }
 
 .charities-kicker {
@@ -58,6 +59,7 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .charities-btn {
@@ -121,6 +123,7 @@
   display: flex;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 18px;
 }
 
@@ -154,6 +157,7 @@
   color: rgba(223, 232, 248, 0.74);
   line-height: 1.75;
   min-height: 110px;
+  word-break: break-word;
 }
 
 .charity-impact {
@@ -263,5 +267,34 @@
 
   .charities-grid {
     grid-template-columns: 1fr;
+  }
+
+  .charities-actions {
+    width: 100%;
+  }
+
+  .charities-btn {
+    width: 100%;
+  }
+
+  .charities-hero h1 {
+    font-size: clamp(2rem, 12vw, 2.9rem);
+  }
+}
+
+@media (max-width: 520px) {
+  .charities-page {
+    padding: 18px 12px 28px;
+  }
+
+  .charities-hero,
+  .charities-filter-bar,
+  .charity-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .charity-card p {
+    min-height: 0;
   }
 }

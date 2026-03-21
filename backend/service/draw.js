@@ -49,7 +49,7 @@ const getSubscriptionAmount = (user) => {
   return PLAN_AMOUNTS[user?.subscription?.plan] || PLAN_AMOUNTS.monthly;
 };
 
-const executeDraw = async (mode = "random") => {
+const buildDrawSummary = async (mode = "random") => {
   const users = await User.find({ "subscription.status": "active" });
   const activeUserIds = users.map((user) => String(user._id));
   const scoreDocs = await Score.find({ userId: { $in: activeUserIds } }).sort({ createdAt: -1 });
@@ -95,28 +95,14 @@ const executeDraw = async (mode = "random") => {
   assignPrize(winners4, 0.35);
   assignPrize(winners3, 0.25);
 
-  await Draw.create({
-    numbers: drawNumbers,
-    mode,
-    participantCount: participants.length,
-    totalPool,
-  });
-
-  const results = [];
-
-  for (const participant of participants) {
-    const prize = prizeMap.get(String(participant.userId)) || 0;
-    const result = await Result.create({
-      userId: participant.userId,
-      matches: participant.matches,
-      prize,
-      status: prize > 0 ? "pending" : "lost",
-      draw: drawNumbers,
-    });
-
-    results.push(result);
-    sendDrawResultNotification({ user: participant.user, result });
-  }
+  const participantResults = participants.map((participant) => ({
+    userId: participant.userId,
+    user: participant.user,
+    matches: participant.matches,
+    prize: prizeMap.get(String(participant.userId)) || 0,
+    status: (prizeMap.get(String(participant.userId)) || 0) > 0 ? "pending" : "lost",
+    draw: drawNumbers,
+  }));
 
   return {
     drawNumbers,
@@ -128,11 +114,43 @@ const executeDraw = async (mode = "random") => {
       four: winners4.length,
       three: winners3.length,
     },
+    results: participantResults,
+  };
+};
+
+const executeDraw = async (mode = "random") => {
+  const summary = await buildDrawSummary(mode);
+
+  await Draw.create({
+    numbers: summary.drawNumbers,
+    mode: summary.mode,
+    participantCount: summary.participants,
+    totalPool: summary.totalPool,
+  });
+
+  const results = [];
+
+  for (const participant of summary.results) {
+    const result = await Result.create({
+      userId: participant.userId,
+      matches: participant.matches,
+      prize: participant.prize,
+      status: participant.status,
+      draw: participant.draw,
+    });
+
+    results.push(result);
+    sendDrawResultNotification({ user: participant.user, result });
+  }
+
+  return {
+    ...summary,
     results,
   };
 };
 
 module.exports = {
+  buildDrawSummary,
   executeDraw,
   PLAN_AMOUNTS,
 };
