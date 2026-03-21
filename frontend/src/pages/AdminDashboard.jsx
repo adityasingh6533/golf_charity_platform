@@ -2,6 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import "../styles/AdminDashboard.css";
 import API from "../utils/commonapi";
 
+function getCachedAuthUser() {
+  try {
+    const raw = localStorage.getItem("authUser");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 function formatCurrency(amount) {
   return `Rs. ${Number(amount || 0).toLocaleString("en-IN")}`;
 }
@@ -156,13 +165,15 @@ function ResultRow({ entry, onVerify, onReject, onPaid }) {
 }
 
 export default function AdminDashboard() {
+  const cachedAuthUser = getCachedAuthUser();
+  const cachedIsAdmin = String(cachedAuthUser?.role || "").toLowerCase() === "admin";
   const [users, setUsers] = useState([]);
   const [results, setResults] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [charities, setCharities] = useState([]);
   const [drawStatus, setDrawStatus] = useState("");
   const [loading, setLoading] = useState(false);
-  const [bootstrapping, setBootstrapping] = useState(true);
+  const [bootstrapping, setBootstrapping] = useState(!cachedIsAdmin);
   const [drawMode, setDrawMode] = useState("random");
   const [drawPreview, setDrawPreview] = useState(null);
   const [editingCharityId, setEditingCharityId] = useState("");
@@ -190,6 +201,14 @@ export default function AdminDashboard() {
       return;
     }
 
+    if (cachedIsAdmin) {
+      setBootstrapping(false);
+      refreshAll().catch((error) => {
+        console.log(error);
+        setDrawStatus(error?.response?.data?.message || error.message || "Unable to load admin data");
+      });
+    }
+
     const verifyAndLoad = async () => {
       try {
         const profileRes = await API.get("/users/me");
@@ -202,7 +221,9 @@ export default function AdminDashboard() {
           return;
         }
 
-        await refreshAll();
+        if (!cachedIsAdmin) {
+          await refreshAll();
+        }
       } catch (error) {
         console.log(error);
         const message = error?.response?.data?.message || error.message || "Unable to load admin data";
@@ -219,7 +240,7 @@ export default function AdminDashboard() {
     };
 
     verifyAndLoad();
-  }, []);
+  }, [cachedIsAdmin]);
 
   const executeDrawRequest = async (simulation) => {
     try {
