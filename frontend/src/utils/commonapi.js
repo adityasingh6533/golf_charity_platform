@@ -1,4 +1,4 @@
-import { API_BASE } from "./api";
+import { API_BASES, requestJson } from "./api";
 
 const buildHeaders = (extraHeaders = {}) => {
   const headers = {
@@ -15,26 +15,23 @@ const buildHeaders = (extraHeaders = {}) => {
 };
 
 const makeRequest = async (method, path, body) => {
-  const response = await fetch(`${API_BASE}/api${path}`, {
-    method,
-    headers: buildHeaders(),
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  try {
+    const payload = await requestJson(`/api${path}`, {
+      method,
+      headers: buildHeaders(),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
 
-  const contentType = response.headers.get("content-type") || "";
-  const payload = contentType.includes("application/json")
-    ? await response.json()
-    : await response.text();
+    return { data: payload };
+  } catch (error) {
+    error.response = { data: error.payload || { message: error.message } };
 
-  if (!response.ok) {
-    const error = new Error(
-      payload?.message || payload?.error || "Request failed"
-    );
-    error.response = { data: payload };
+    if (!API_BASES.length) {
+      error.message = "API base URL is not configured";
+    }
+
     throw error;
   }
-
-  return { data: payload };
 };
 
 const commonapi = {

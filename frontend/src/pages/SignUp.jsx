@@ -31,7 +31,10 @@ export default function SignUp() {
         console.log(error);
         setStatus({
           type: "error",
-          text: "We could not load charities right now. Please refresh and try again."
+          text:
+            error?.response?.data?.message ||
+            error.message ||
+            "We could not load charities right now. Please refresh and try again."
         });
       } finally {
         setCharitiesLoading(false);
