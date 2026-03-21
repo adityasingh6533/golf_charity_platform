@@ -128,3 +128,36 @@ exports.signin = async (req, res) => {
     res.status(500).json({ message: "Unable to authenticate" });
   }
 };
+
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { identifier, newPassword } = req.body;
+
+    if (!identifier || !newPassword) {
+      return res.status(400).json({ message: "Username or email and new password are required" });
+    }
+
+    if (String(newPassword).length <= 6) {
+      return res.status(400).json({ message: "Password must be greater than 6 characters" });
+    }
+
+    const normalizedIdentifier = String(identifier).trim();
+    const normalizedEmail = normalizedIdentifier.toLowerCase();
+
+    const user = await User.findOne({
+      $or: [{ email: normalizedEmail }, { username: normalizedIdentifier }],
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "No account found with that username or email" });
+    }
+
+    user.passwordHash = await bcrypt.hash(String(newPassword), 10);
+    await user.save();
+
+    res.json({ message: "Password updated successfully. Please sign in with your new password." });
+  } catch (error) {
+    console.error("Forgot password error", error);
+    res.status(500).json({ message: "Unable to reset password" });
+  }
+};

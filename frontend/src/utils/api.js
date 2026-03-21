@@ -42,7 +42,8 @@ const postJson = async (path, body) => {
 const API = {
   auth: {
     signup: async (userData) => postJson("/api/auth/signup", userData),
-    signin: async (credentials) => postJson("/api/auth/signin", credentials)
+    signin: async (credentials) => postJson("/api/auth/signin", credentials),
+    forgotPassword: async (payload) => postJson("/api/auth/forgot-password", payload)
   }
 };
 

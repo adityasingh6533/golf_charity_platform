@@ -7,14 +7,28 @@ const initialFormState = {
   password: ""
 };
 
+const initialResetState = {
+  identifier: "",
+  newPassword: "",
+  confirmPassword: ""
+};
+
 export default function SignIn() {
   const [form, setForm] = useState(initialFormState);
+  const [resetForm, setResetForm] = useState(initialResetState);
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleResetChange = (e) => {
+    const { name, value } = e.target;
+    setResetForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -46,6 +60,41 @@ export default function SignIn() {
       setStatus({ type: "error", text: error.message });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+
+    if (resetForm.newPassword !== resetForm.confirmPassword) {
+      setStatus({ type: "error", text: "Reset passwords do not match." });
+      return;
+    }
+
+    if (resetForm.newPassword.length <= 6) {
+      setStatus({ type: "error", text: "Password must be greater than 6 characters." });
+      return;
+    }
+
+    setResetLoading(true);
+    setStatus(null);
+
+    try {
+      const data = await API.auth.forgotPassword({
+        identifier: resetForm.identifier.trim(),
+        newPassword: resetForm.newPassword,
+      });
+
+      setStatus({
+        type: "success",
+        text: data.message || "Password updated successfully.",
+      });
+      setResetForm(initialResetState);
+      setShowForgotPassword(false);
+    } catch (error) {
+      setStatus({ type: "error", text: error.message });
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -83,6 +132,55 @@ export default function SignIn() {
             {loading ? "Signing in..." : "Login"}
           </button>
         </form>
+
+        <p>
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={() => {
+              setShowForgotPassword((prev) => !prev);
+              setStatus(null);
+            }}
+            style={{ marginTop: "10px" }}
+          >
+            {showForgotPassword ? "Hide Forgot Password" : "Forgot Password?"}
+          </button>
+        </p>
+
+        {showForgotPassword && (
+          <form onSubmit={handleForgotPassword}>
+            <input
+              type="text"
+              name="identifier"
+              placeholder="Username or Email"
+              value={resetForm.identifier}
+              onChange={handleResetChange}
+              required
+            />
+
+            <input
+              type="password"
+              name="newPassword"
+              placeholder="New Password"
+              value={resetForm.newPassword}
+              onChange={handleResetChange}
+              required
+            />
+
+            <input
+              type="password"
+              name="confirmPassword"
+              placeholder="Confirm New Password"
+              value={resetForm.confirmPassword}
+              onChange={handleResetChange}
+              required
+            />
+
+            <button className="btn primary" type="submit" disabled={resetLoading}>
+              {resetLoading ? "Updating..." : "Reset Password"}
+            </button>
+          </form>
+        )}
 
         <p>
           Don't have an account?
