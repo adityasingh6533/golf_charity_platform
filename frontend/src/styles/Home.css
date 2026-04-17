@@ -266,6 +266,59 @@ body {
   gap: 16px;
 }
 
+.home-snapshot-grid {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-snapshot-card,
+.home-winner-card {
+  padding: 18px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(10, 18, 34, 0.9), rgba(18, 28, 52, 0.72));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.home-snapshot-card span {
+  display: block;
+  color: rgba(224, 232, 248, 0.68);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+
+.home-snapshot-card strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 1.8rem;
+}
+
+.home-winner-list {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.home-winner-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.home-winner-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.home-winner-meta {
+  margin-top: 6px;
+  color: rgba(223, 232, 248, 0.72);
+}
+
 .home-charity-top {
   display: flex;
   justify-content: space-between;
@@ -315,7 +368,8 @@ body {
   .home-hero,
   .home-showcase,
   .home-charity-grid,
-  .home-feature-grid {
+  .home-feature-grid,
+  .home-snapshot-grid {
     grid-template-columns: 1fr;
   }
 }

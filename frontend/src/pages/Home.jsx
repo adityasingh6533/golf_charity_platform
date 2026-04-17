@@ -2,20 +2,36 @@ import { useEffect, useState } from "react";
 import API from "../utils/commonapi";
 import "../styles/Home.css";
 
+function formatCurrency(amount) {
+  return `Rs. ${Number(amount || 0).toLocaleString("en-IN")}`;
+}
+
+function winnerName(entry) {
+  const firstName = entry?.userId?.firstName || "Player";
+  const lastName = entry?.userId?.lastName || "";
+  return `${firstName} ${lastName}`.trim();
+}
+
 export default function Home() {
   const [featuredCharities, setFeaturedCharities] = useState([]);
+  const [overview, setOverview] = useState(null);
 
   useEffect(() => {
-    const loadFeatured = async () => {
+    const loadHomeData = async () => {
       try {
-        const res = await API.get("/charities/featured");
-        setFeaturedCharities(Array.isArray(res.data) ? res.data : []);
+        const [featuredRes, overviewRes] = await Promise.all([
+          API.get("/charities/featured"),
+          API.get("/result/overview"),
+        ]);
+
+        setFeaturedCharities(Array.isArray(featuredRes.data) ? featuredRes.data : []);
+        setOverview(overviewRes.data || null);
       } catch (error) {
         console.log(error);
       }
     };
 
-    loadFeatured();
+    loadHomeData();
   }, []);
 
   return (
@@ -52,16 +68,16 @@ export default function Home() {
 
           <div className="home-hero-card">
             <div className="home-stat">
-              <span>Subscription Plans</span>
-              <strong>Monthly + Yearly</strong>
+              <span>Active Subscribers</span>
+              <strong>{overview?.activeSubscribers ?? "Live"}</strong>
             </div>
             <div className="home-stat">
-              <span>Draw Logic</span>
-              <strong>Random + Algorithm</strong>
+              <span>Total Draws</span>
+              <strong>{overview?.totalDraws ?? "Ready"}</strong>
             </div>
             <div className="home-stat">
-              <span>Impact Engine</span>
-              <strong>Player-picked charity share</strong>
+              <span>Donation Impact</span>
+              <strong>{overview ? formatCurrency(overview.totalDonations) : "Tracking live"}</strong>
             </div>
           </div>
         </section>
@@ -109,6 +125,46 @@ export default function Home() {
               <div className="home-step"><span>03</span> Pick a charity and contribution share.</div>
               <div className="home-step"><span>04</span> Join the monthly draw and submit proof if you win.</div>
             </div>
+          </div>
+        </section>
+
+        <section className="home-panel">
+          <div className="home-panel-head">
+            <div>
+              <div className="home-mini-kicker">Live Platform Snapshot</div>
+              <h2>Real activity across members, draws, and winners.</h2>
+            </div>
+          </div>
+
+          <div className="home-snapshot-grid">
+            <div className="home-snapshot-card">
+              <span>Total Members</span>
+              <strong>{overview?.totalUsers ?? 0}</strong>
+            </div>
+            <div className="home-snapshot-card">
+              <span>Featured Charities</span>
+              <strong>{overview?.featuredCharities ?? featuredCharities.length}</strong>
+            </div>
+            <div className="home-snapshot-card">
+              <span>Recent Winners</span>
+              <strong>{overview?.recentWinners?.length ?? 0}</strong>
+            </div>
+          </div>
+
+          <div className="home-winner-list">
+            {overview?.recentWinners?.length ? (
+              overview.recentWinners.map((winner) => (
+                <article key={winner._id} className="home-winner-card">
+                  <div>
+                    <div className="home-winner-name">{winnerName(winner)}</div>
+                    <div className="home-winner-meta">{winner.matches} matches</div>
+                  </div>
+                  <strong>{formatCurrency(winner.prize)}</strong>
+                </article>
+              ))
+            ) : (
+              <div className="home-empty">Recent winners will appear here after published draws.</div>
+            )}
           </div>
         </section>
 

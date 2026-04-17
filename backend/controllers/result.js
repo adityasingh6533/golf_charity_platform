@@ -1,13 +1,45 @@
 const Result = require("../models/result");
+const Charity = require("../models/charity");
+const Donation = require("../models/donation");
+const Draw = require("../models/draw");
+const User = require("../models/user");
 
 const isValidProofReference = (value) => {
   if (!value) return false;
   return /^(https?:\/\/|data:image\/)/i.test(String(value).trim());
 };
 
+exports.getPublicOverview = async (req, res) => {
+  try {
+    const [totalUsers, activeSubscribers, featuredCharities, totalDraws, recentWinners, donationSummary] =
+      await Promise.all([
+        User.countDocuments(),
+        User.countDocuments({ "subscription.status": "active" }),
+        Charity.countDocuments({ active: true, featured: true }),
+        Draw.countDocuments(),
+        Result.find({ prize: { $gt: 0 } })
+          .populate("userId", "firstName lastName")
+          .sort({ createdAt: -1, prize: -1 })
+          .limit(3),
+        Donation.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
+      ]);
+
+    res.json({
+      totalUsers,
+      activeSubscribers,
+      featuredCharities,
+      totalDraws,
+      totalDonations: Number(donationSummary[0]?.total || 0),
+      recentWinners,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.getLeaderboard = async (req, res) => {
   try {
-    const data = await Result.find()
+    const data = await Result.find({ prize: { $gt: 0 } })
       .populate("userId", "firstName lastName email")
       .sort({ prize: -1, matches: -1, createdAt: -1 })
       .limit(12);

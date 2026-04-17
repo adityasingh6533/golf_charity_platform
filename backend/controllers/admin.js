@@ -106,7 +106,9 @@ exports.getAnalytics = async (req, res) => {
       totalResults: results.length,
       totalDraws: draws.length,
       charityContributionTotal,
-      pendingVerifications: results.filter((entry) => entry.status === "pending" && entry.prize > 0).length,
+      pendingVerifications: results.filter(
+        (entry) => entry.status === "pending" && entry.prize > 0 && entry.proofUrl
+      ).length,
       draws,
       charityBreakdown,
     });

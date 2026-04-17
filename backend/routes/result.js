@@ -1,10 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const { requireLogin, requireActiveSubscription } = require("../middleware/auth");
+const { requireLogin } = require("../middleware/auth");
 const resultController = require("../controllers/result");
 
+router.get("/overview", resultController.getPublicOverview);
 router.get("/leaderboard", resultController.getLeaderboard);
-router.put("/:resultId/proof", requireLogin, requireActiveSubscription, resultController.submitWinnerProof);
-router.get("/:userId", requireLogin, requireActiveSubscription, resultController.getUserResults);
+router.put("/:resultId/proof", requireLogin, resultController.submitWinnerProof);
+router.get("/:userId", requireLogin, resultController.getUserResults);
 
 module.exports = router;
